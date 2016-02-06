@@ -4,7 +4,7 @@
   "description": "A simple and easy way to generate a CHANGELOG.md based on Angular's changelog.js",
   "main": "index.js",
   "scripts": {
-    "check-coverage": "istanbul check-coverage --statements 55 --branches 55 --functions 55 --lines 55",
+    "check-coverage": "istanbul check-coverage --statements 50 --branches 50 --functions 50 --lines 50",
     "report-coverage": "cat ./coverage/lcov.info | codecov",
     "test": "istanbul cover -x *.spec.js _mocha -- -R spec tests",
     "test:tdd": "mocha tests -w",
@@ -26,7 +26,7 @@
     "url": "https://github.com/dougiefresh49/ez-changelog/issues"
   },
   "bin": {
-    "ezChangelog": "./index.js"
+    "ez-changelog": "./index.js"
   },
   "homepage": "https://github.com/dougiefresh49/ez-changelog#readme",
   "dependencies": {
