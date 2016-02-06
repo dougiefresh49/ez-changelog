@@ -2,6 +2,15 @@
 A simple and easy way to generate a CHANGELOG.md based on 
 [Angular's changelog.js](https://github.com/angular/angular.js/blob/master/changelog.js)
 
+[![travis build](https://img.shields.io/travis/dougiefresh49/ez-changelog.svg?style=flat-square)](https://travis-ci.org/dougiefresh49/ez-changelog)
+[![codecov coverage](https://img.shields.io/codecov/c/github/dougiefresh49/ez-changelog.svg?style=flat-square)](https://codecov.io/github/dougiefresh49/ez-changelog)
+[![version](https://img.shields.io/npm/v/ez-changelog.svg?style=flat-square)](http://npm.im/ez-changelog)
+[![downloads](https://img.shields.io/npm/dm/ez-changelog.svg?style=flat-square)](http://npm-stat.com/charts.html?package=ez-changelog&from=2016-23-01)
+[![MIT License](https://img.shields.io/npm/l/ez-changelog.svg?style=flat-square)](http://opensource.org/licenses/MIT)
+[![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg?style=flat-square)](https://github.com/semantic-release/semantic-release)
+[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg?style=flat-square)](http://commitizen.github.io/cz-cli/)
+
+
 ## Table of Contents
 
   1. [How It Works](#how-it-works)
@@ -27,24 +36,24 @@ Building the changelog is easy and painless
 
 * Add the following script to your `package.json`
 
-`"changelog": "ez-changelog"`
+  `"changelog": "ez-changelog"`
 
-```js
-// package.json
-{
-  "name": "ez-changelog",
-  "version": "1.0.0",
-  ...
-  "scripts": [
-    "changelog": "ez-changelog"
-  ]
-  ...
-}  
-```
+  ```js
+  // package.json
+  {
+    "name": "ez-changelog",
+    "version": "1.0.0",
+    ...
+    "scripts": [
+      "changelog": "ez-changelog"
+    ]     
+    ...
+  }  
+  ```
 
 * Run the script
 
-`npm run changelog <version-and-title> <changelog-file>`
+  `npm run changelog <version-and-title> <changelog-file>`
 
 
  
