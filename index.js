@@ -224,7 +224,17 @@ var generate = function(version, file) {
         readGitLog('^fix|^feat|^perf|BREAKING', tag).then(function(commits) {
             console.log('Parsed', commits.length, 'commits');
             console.log('Generating changelog to', file || 'stdout', '(', version, ')');
-            writeChangelog(file ? fs.createWriteStream(file, {flags: 'a+'}) : process.stdout, commits, version);
+
+            // Append to top of existing or create new change log
+            var previousChangelog = '';
+            fs.stat(file || 'CHANGELOG.md', function (err, stat) {
+                if(err === null) {
+                    previousChangelog = fs.readFileSync(file || 'CHANGELOG.md');
+                }
+                var writeStream = fs.createWriteStream(file || 'CHANGELOG.md', {flags: 'w'});
+                writeChangelog(writeStream, commits, version);
+                writeStream.write(previousChangelog);
+            });
         });
     });
 };
