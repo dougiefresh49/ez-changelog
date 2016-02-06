@@ -1,0 +1,55 @@
+{
+  "name": "ez-changelog",
+  "version": "0.0.0-semantically-released",
+  "description": "A simple and easy way to generate a CHANGELOG.md based on Angular's changelog.js",
+  "main": "index.js",
+  "scripts": {
+    "check-coverage": "istanbul check-coverage --statements 55 --branches 55 --functions 55 --lines 55",
+    "report-coverage": "cat ./coverage/lcov.info | codecov",
+    "test": "istanbul cover -x *.spec.js _mocha -- -R spec tests",
+    "test:tdd": "mocha tests -w",
+    "commit": "git-cz",
+    "semantic-release": "semantic-release pre && npm publish && semantic-release post"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dougiefresh49/ez-changelog"
+  },
+  "keywords": [
+    "easy",
+    "changelog",
+    "generator"
+  ],
+  "author": "Doug Lasater <doug.lasater.3@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dougiefresh49/ez-changelog/issues"
+  },
+  "bin": {
+    "ezChangelog": "./index.js"
+  },
+  "homepage": "https://github.com/dougiefresh49/ez-changelog#readme",
+  "dependencies": {
+    "fs": "0.0.2",
+    "qq": "0.3.5",
+    "util": "0.10.3"
+  },
+  "devDependencies": {
+    "chai": "3.5.0",
+    "codecov.io": "0.1.6",
+    "commitizen": "2.5.0",
+    "cz-conventional-changelog": "1.1.5",
+    "ghooks": "1.0.3",
+    "istanbul": "0.4.2",
+    "mocha": "2.4.5",
+    "semantic-release": "^4.3.5"
+  },
+  "config": {
+    "ghooks": {
+      "pre-commit": "npm test && npm run check-coverage"
+    },
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}
