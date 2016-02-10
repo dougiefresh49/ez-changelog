@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 'use strict';
 
-var child = require('child_process');
-var fs = require('fs');
-var util = require('util');
-var q = require('qq');
-var packageJson = require('./package.json');
+var q = require('qq'),
+    fs = require('fs'),
+    util = require('util'),
+    argv = require('yargs').argv,
+    child = require('child_process'),
+    packageJson = require('./package.json');
 
-var GIT_LOG_CMD = 'git log --grep="%s" -E --format=%s %s..HEAD';
 var GIT_TAG_CMD = 'git describe --tags --abbrev=0';
+var GIT_LOG_CMD = 'git log --grep="%s" -E --format=%s %s..HEAD';
 
-var HEADER_TPL = '<a name="%s"></a>\n# %s (%s)\n\n';
 var EMPTY_COMPONENT = '$$';
+var HEADER_TPL = '<a name="%s"></a>\n# %s (%s)\n\n';
 
+var IS_INCREMENTAL = false;
 
 function getRepoUrl(pJson) {
     var repoUrl = '';
@@ -100,9 +102,8 @@ var linkToIssue = function(issue) {
 
 var linkToCommit = function(hash) {
     var commitLink = '[%s](' + getRepoUrl(packageJson) + '\/%s)';
-    return util.format(commitLink, hash.substr(0, 8), hash);
+    return (hash) ? util.format(commitLink, hash.substr(0, 8), hash) : '';
 };
-
 
 var currentDate = function(currDate) {
     var now = currDate || new Date();
@@ -112,7 +113,6 @@ var currentDate = function(currDate) {
 
     return util.format('%d-%s-%s', now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate()));
 };
-
 
 var printSection = function(stream, title, section, printCommitLinks) {
     printCommitLinks = printCommitLinks === undefined ? true : printCommitLinks;
@@ -151,11 +151,10 @@ var printSection = function(stream, title, section, printCommitLinks) {
     stream.write('\n');
 };
 
-
+// TODO: increase test on this
 var readGitLog = function(grep, from) {
     var deferred = q.defer();
 
-    // TODO: if it's slow, use spawn and stream it instead
     child.exec(util.format(GIT_LOG_CMD, grep, '%H%n%s%n%b%n==END==', from), function(code, stdout, stderr) {
         var commits = [];
 
@@ -170,8 +169,8 @@ var readGitLog = function(grep, from) {
     return deferred.promise;
 };
 
-
-var writeChangelog = function(stream, commits, version) {
+function getSectionsFomCommits(commits) {
+    // Init sections
     var sections = {
         fix: {},
         feat: {},
@@ -181,6 +180,7 @@ var writeChangelog = function(stream, commits, version) {
 
     sections.breaks[EMPTY_COMPONENT] = [];
 
+    // Loop through the commits and save the commit to its corresponding section
     commits.forEach(function(commit) {
         var section = sections[commit.type];
         var component = commit.component || EMPTY_COMPONENT;
@@ -200,6 +200,10 @@ var writeChangelog = function(stream, commits, version) {
         }
     });
 
+    return sections;
+}
+
+var writeChangelog = function(stream, sections, version) {
     stream.write(util.format(HEADER_TPL, version, version, currentDate()));
     printSection(stream, 'Bug Fixes', sections.fix);
     printSection(stream, 'Features', sections.feat);
@@ -207,6 +211,14 @@ var writeChangelog = function(stream, commits, version) {
     printSection(stream, 'Breaking Changes', sections.breaks, false);
 };
 
+// TODO: finish this
+// TODO: test this
+function getUpdatedVersionName(versionName, pJson) {
+    if (IS_INCREMENTAL) {
+
+    }
+    return versionName;
+}
 
 var getPreviousTag = function() {
     var deferred = q.defer();
@@ -217,22 +229,38 @@ var getPreviousTag = function() {
     return deferred.promise;
 };
 
+// TODO: might need to test this more for coverage
+function getPreviousChangelog(file) {
+    var deferred = q.defer();
 
-var generate = function(version, file) {
+    fs.stat(file, function (err, stat) {
+        (err === null) ? deferred.resolve(fs.readFileSync(file)) : deferred.resolve('');
+    });
+
+    return deferred.promise;
+}
+
+// TODO: test this
+var generate = function(file, version) {
+
+    // todo: if incremental and no file, file = buildlog
+    // todo: if no file and no incremental, file = changelog
+    // todo default version name is version tag
+    // todo if incremental, default version name is packagename.tag#.buildNumber (if build number is there)
+    IS_INCREMENTAL = (argv.incremental) ? true : false;
+
     getPreviousTag().then(function(tag) {
-        console.log('Reading git log since', tag);
-        readGitLog('^fix|^feat|^perf|BREAKING', tag).then(function(commits) {
-            console.log('Parsed', commits.length, 'commits');
-            console.log('Generating changelog to', file || 'stdout', '(', version, ')');
 
-            // Append to top of existing or create new change log
-            var previousChangelog = '';
-            fs.stat(file || 'CHANGELOG.md', function (err, stat) {
-                if(err === null) {
-                    previousChangelog = fs.readFileSync(file || 'CHANGELOG.md');
-                }
-                var writeStream = fs.createWriteStream(file || 'CHANGELOG.md', {flags: 'w'});
-                writeChangelog(writeStream, commits, version);
+        console.log('Reading git log since', tag);
+
+        readGitLog('^fix|^feat|^perf|BREAKING', tag).then(function(commits) {
+
+            console.log('Parsed', commits.length, 'commits');
+            console.log('Generating changelog to', file, '(', version, ')');
+
+            getPreviousChangelog(file).then(function (previousChangelog) {
+                var writeStream = fs.createWriteStream(file, {flags: 'w'});
+                writeChangelog(writeStream, getSectionsFomCommits(commits), getUpdatedVersionName(version, packageJson));
                 writeStream.write(previousChangelog);
             });
         });
@@ -242,14 +270,19 @@ var generate = function(version, file) {
 
 // publish for testing
 module.exports = {
-    parseRawCommit: parseRawCommit,
-    printSection: printSection,
+    currentDate: currentDate,
+    generate: generate,
     getRepoUrl: getRepoUrl,
     getIssueUrl: getIssueUrl,
+    getPreviousChangelog: getPreviousChangelog,
+    getSectionsFomCommits: getSectionsFomCommits,
     linkToIssue: linkToIssue,
     linkToCommit: linkToCommit,
-    currentDate: currentDate
+    parseRawCommit: parseRawCommit,
+    printSection: printSection,
+    writeChangelog: writeChangelog
 };
 
 // Main Function
-generate(process.argv[2], process.argv[3]);
+// Pass in FileName and versionAndName
+//generate(process.argv[2], process.argv[3]);

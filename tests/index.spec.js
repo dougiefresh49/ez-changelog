@@ -102,6 +102,143 @@ describe('changelog.js', function() {
             changelog.printSection(streamMock, title, section, printCommitLinks);
             expect(output).to.be.eql(expectedOutput);
         });
+
+        it('should print commit links', function() {
+            var title = 'test',
+                printCommitLinks = true;
+
+            var section = {
+                changelog: [
+                    {
+                        hash: "265d635cef8bdc16c286477beb948fd11e85bfc1",
+                        "closes": [],
+                        subject: 'add ability to append to top of existing changelog vs bottom'
+                    }
+                ],
+                readme: [{
+                    hash: "298cffa6a7a36bcde5650323b5d6d0f6cec065e8",
+                    "closes": [],
+                    subject: 'add initial readmen with examples and usage'
+                }]
+            };
+
+            var expectedOutput =
+                '\n' + '## test\n\n' +
+                '- **changelog:** add ability to append to top of existing changelog vs bottom\n' +
+                '  ([265d635c](https://github.com/dougiefresh49/ez-changelog/commit/265d635cef8bdc16c286477beb948fd11e85bfc1))\n' +
+                '- **readme:** add initial readmen with examples and usage\n' +
+                '  ([298cffa6](https://github.com/dougiefresh49/ez-changelog/commit/298cffa6a7a36bcde5650323b5d6d0f6cec065e8))\n\n';
+
+            changelog.printSection(streamMock, title, section, printCommitLinks);
+            expect(output).to.be.eql(expectedOutput);
+
+        });
+    });
+
+    describe('writeChangelog', function () {
+        var output;
+        var streamMock = {
+            write: function(str) {
+                output += str;
+            }
+        };
+
+        var sections = {
+            "fix": {},
+            "feat": {
+                "changelog": [{
+                    "hash": "265d635cef8bdc16c286477beb948fd11e85bfc1",
+                    "subject": "add ability to append to top of existing changelog vs bottom",
+                    "closes": [],
+                    "breaks": [],
+                    "body": "",
+                    "type": "feat",
+                    "component": "changelog"
+                }],
+                "readme": [{
+                    "hash": "298cffa6a7a36bcde5650323b5d6d0f6cec065e8",
+                    "subject": "add initial readmen with examples and usage",
+                    "closes": [],
+                    "breaks": [],
+                    "body": "",
+                    "type": "feat",
+                    "component": "readme"
+                }]
+            },
+            "perf": {},
+            "breaks": {}
+        };
+
+        beforeEach(function() {
+            output = '';
+        });
+
+        it('should write to changelog', function() {
+            var currentDate = changelog.currentDate();
+            var expectedOutput =
+                '<a name="vTest"></a>\n' +
+                '# vTest (' + currentDate + ')\n' +
+                '\n' +
+                '\n' +
+                '## Features\n\n' +
+                '- **changelog:** add ability to append to top of existing changelog vs bottom\n' +
+                '  ([265d635c](https://github.com/dougiefresh49/ez-changelog/commit/265d635cef8bdc16c286477beb948fd11e85bfc1))\n' +
+                '- **readme:** add initial readmen with examples and usage\n' +
+                '  ([298cffa6](https://github.com/dougiefresh49/ez-changelog/commit/298cffa6a7a36bcde5650323b5d6d0f6cec065e8))\n\n';
+
+            changelog.writeChangelog(streamMock, sections, 'vTest');
+            expect(output).to.be.eql(expectedOutput);
+        });
+    });
+
+    describe('getSectionsFomCommits', function () {
+        it('should get default sections for no commits', function() {
+            var sections = changelog.getSectionsFomCommits([]);
+            expect(sections.fix).to.be.eql({});
+            expect(sections.feat).to.be.eql({});
+            expect(sections.perf).to.be.eql({});
+            expect(sections.breaks).to.be.eql({'$$' : []});
+        });
+
+        it('should get sections from a commit of varying types', function() {
+            var commits = [
+                {
+                    hash: '265d635cef8bdc16c286477beb948fd11e85bfc1',
+                    subject: 'add ability to append to top of existing changelog vs bottom',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'fix',
+                    component: 'changelog'
+                },
+                {
+                    hash: '298cffa6a7a36bcde5650323b5d6d0f6cec065e8',
+                    subject: 'add initial readmen with examples and usage',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'feat',
+                    component: 'readme'
+                },
+                {
+                    hash: 'bc587e5cff8342d1e70c807f982723473a05914a',
+                    subject: 'change node executable to be named ez-changelog vs ezChangelog',
+                    closes: [],
+                    breaks: [],
+                    breaking: ' v1.0.0 saved the node executable as ezChangelog whereas this update will save the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    body: 'BREAKING CHANGE: v1.0.0 saved the node executable as ezChangelog whereas this update will save the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    type: 'feat',
+                    component: 'node executable'
+                }
+            ];
+
+            var sections = changelog.getSectionsFomCommits(commits);
+            expect(sections.fix.changelog.length).to.be.eql(1);
+            expect(sections.fix.changelog[0].hash).to.be.eql('265d635cef8bdc16c286477beb948fd11e85bfc1');
+
+            expect(sections.feat.readme.length).to.be.eql(1);
+            expect(sections.feat.readme[0].hash).to.be.eql('298cffa6a7a36bcde5650323b5d6d0f6cec065e8');
+        });
     });
 
     describe('getRepoUrl', function () {
@@ -185,5 +322,16 @@ describe('changelog.js', function() {
         it('should get the current date', function() {
             expect(changelog.currentDate(new Date(2016, 1, 5))).to.be.eql('2016-02-05');
         });
+    });
+
+    describe('getPreviousChangelog', function () {
+        it('should get empty string when no previous changelog ', function() {
+            changelog.getPreviousChangelog('').then(function (prevChangeLog) {
+                expect(prevChangeLog).to.be.eql('');
+            });
+        });
+
+        // TODO: prob need to test if there is an existing file
+        // would create fake file, write blah to it, call getPreviousChangelog, then delete the file
     });
 });
