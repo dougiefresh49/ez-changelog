@@ -5,6 +5,180 @@ var expect = require('chai').expect,
 
 describe('changelog.js', function() {
 
+    describe('currentDate', function () {
+        it('should get the current date', function() {
+            expect(changelog.currentDate(new Date(2016, 1, 5))).to.be.eql('2016-02-05');
+        });
+    });
+
+    describe('getFileName', function () {
+        it('should get BUILDLOG.md as file name', function() {
+            expect(changelog.getFileName(true)).to.be.eql('BUILDLOG.md');
+        });
+
+        it('should get CHANGELOG.md as file name', function() {
+            expect(changelog.getFileName()).to.be.eql('CHANGELOG.md');
+        });
+    });
+
+    describe('getIssueUrl', function () {
+        it('should return empty string if no package.json', function() {
+            expect(changelog.getIssueUrl()).to.be.eql('');
+        });
+
+        it('should return empty string if package.json has no bugs', function() {
+            expect(changelog.getIssueUrl({})).to.be.eql('');
+        });
+
+        it('should return empty string if package.json has no bugs.url', function() {
+            expect(changelog.getIssueUrl({"bugs": {}})).to.be.eql('');
+        });
+
+        it('should return the package.json bugs.url', function() {
+            var pJson = {
+                "bugs": {
+                    "url": "https://github.com/dougiefresh49/ez-changelog/issues"
+                }
+            };
+            expect(changelog.getIssueUrl(pJson)).to.be.eql('https://github.com/dougiefresh49/ez-changelog/issues');
+        });
+
+    });
+
+    describe('getPreviousChangelog', function () {
+        it('should get empty string when no previous changelog ', function() {
+            changelog.getPreviousChangelog('').then(function (prevChangeLog) {
+                expect(prevChangeLog).to.be.eql('');
+            });
+        });
+
+        // TODO: prob need to test if there is an existing file
+        // would create fake file, write blah to it, call getPreviousChangelog, then delete the file
+    });
+
+    describe('getRepoUrl', function () {
+        it('should return empty string if no package.json', function() {
+            expect(changelog.getRepoUrl()).to.be.eql('');
+        });
+
+        it('should return empty string if package.json has no repo', function() {
+            expect(changelog.getRepoUrl({})).to.be.eql('');
+        });
+
+        it('should return empty string if package.json has no repo.url', function() {
+            expect(changelog.getRepoUrl({"repository": {}})).to.be.eql('');
+        });
+
+        it('should remove \/browse from repo url', function() {
+            var pJson = {
+                "repository": {
+                    "url": "https://bitbucket.org/usr/repo/browse"
+                }
+            };
+            expect(changelog.getRepoUrl(pJson)).to.be.eql('https://bitbucket.org/usr/repo/commits');
+        });
+
+        it('should add \/commit to github url', function() {
+            var pJson = {
+                "repository": {
+                    "url": "https://github.com/angular/angular.js"
+                }
+            };
+            expect(changelog.getRepoUrl(pJson)).to.be.eql('https://github.com/angular/angular.js/commit');
+        });
+
+        it('should add \/commits to bitbucket url', function() {
+            var pJson = {
+                "repository": {
+                    "url": "https://bitbucket.org/usr/repo/browse"
+                }
+            };
+            expect(changelog.getRepoUrl(pJson)).to.be.eql('https://bitbucket.org/usr/repo/commits');
+        });
+    });
+
+    describe('getSectionsFomCommits', function () {
+        it('should get default sections for no commits', function() {
+            var sections = changelog.getSectionsFomCommits([]);
+            expect(sections.fix).to.be.eql({});
+            expect(sections.feat).to.be.eql({});
+            expect(sections.perf).to.be.eql({});
+            expect(sections.breaks).to.be.eql({'$$' : []});
+        });
+
+        it('should get sections from a commit of varying types', function() {
+            var commits = [
+                {
+                    hash: '265d635cef8bdc16c286477beb948fd11e85bfc1',
+                    subject: 'add ability to append to top of existing changelog vs bottom',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'fix',
+                    component: 'changelog'
+                },
+                {
+                    hash: '298cffa6a7a36bcde5650323b5d6d0f6cec065e8',
+                    subject: 'add initial readmen with examples and usage',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'feat',
+                    component: 'readme'
+                },
+                {
+                    hash: 'bc587e5cff8342d1e70c807f982723473a05914a',
+                    subject: 'change node executable to be named ez-changelog vs ezChangelog',
+                    closes: [],
+                    breaks: [],
+                    breaking: ' v1.0.0 saved the node executable as ezChangelog whereas this update will save ' +
+                    'the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    body: 'BREAKING CHANGE: v1.0.0 saved the node executable as ezChangelog whereas this update will' +
+                    ' save the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    type: 'feat',
+                    component: 'node executable'
+                }
+            ];
+
+            var sections = changelog.getSectionsFomCommits(commits);
+            expect(sections.fix.changelog.length).to.be.eql(1);
+            expect(sections.fix.changelog[0].hash).to.be.eql('265d635cef8bdc16c286477beb948fd11e85bfc1');
+
+            expect(sections.feat.readme.length).to.be.eql(1);
+            expect(sections.feat.readme[0].hash).to.be.eql('298cffa6a7a36bcde5650323b5d6d0f6cec065e8');
+        });
+    });
+
+    describe('getUpdatedVersionName', function () {
+        it('should get default changelog tag', function() {
+            expect(changelog.getUpdatedVersionName(false, 'v1.2.0', '', {})).to.be.eql('v1.2.0');
+        });
+
+        it('should get default buildlog tag with no package.json', function() {
+            expect(changelog.getUpdatedVersionName(true, 'v1.2.0', '')).to.be.eql('v1.2.0');
+        });
+
+        it('should get default buildlog tag with no package.json name field', function() {
+            expect(changelog.getUpdatedVersionName(true, 'v1.2.0', '', {})).to.be.eql('v1.2.0');
+        });
+
+        it('should get buildlog tag with package.json name defined', function() {
+            expect(changelog.getUpdatedVersionName(true, 'v1.2.0', '33', {name: 'ez-changelog'})).to.be.eql('ez-changelog-v1.2.0.33');
+        });
+    });
+
+    describe('linkToCommit', function () {
+        it('should create a link to a commit', function() {
+            expect(changelog.linkToCommit('992faac888d81a8f18c8646be2a2b07eb36feed7')).to.be.eql('[992faac8](https://github.com/dougiefresh49/ez-changelog/commit/992faac888d81a8f18c8646be2a2b07eb36feed7)');
+        });
+    });
+
+    describe('linkToIssue', function () {
+        it('should create a link to an issue', function() {
+            expect(changelog.linkToIssue('333')).to.be.eql('[#333](https://github.com/dougiefresh49/ez-changelog/issues/333)');
+        });
+    });
+
     describe('parseRawCommit', function() {
         it('should parse raw commit', function() {
             var msg = changelog.parseRawCommit(
@@ -189,149 +363,5 @@ describe('changelog.js', function() {
             changelog.writeChangelog(streamMock, sections, 'vTest');
             expect(output).to.be.eql(expectedOutput);
         });
-    });
-
-    describe('getSectionsFomCommits', function () {
-        it('should get default sections for no commits', function() {
-            var sections = changelog.getSectionsFomCommits([]);
-            expect(sections.fix).to.be.eql({});
-            expect(sections.feat).to.be.eql({});
-            expect(sections.perf).to.be.eql({});
-            expect(sections.breaks).to.be.eql({'$$' : []});
-        });
-
-        it('should get sections from a commit of varying types', function() {
-            var commits = [
-                {
-                    hash: '265d635cef8bdc16c286477beb948fd11e85bfc1',
-                    subject: 'add ability to append to top of existing changelog vs bottom',
-                    closes: [],
-                    breaks: [],
-                    body: '',
-                    type: 'fix',
-                    component: 'changelog'
-                },
-                {
-                    hash: '298cffa6a7a36bcde5650323b5d6d0f6cec065e8',
-                    subject: 'add initial readmen with examples and usage',
-                    closes: [],
-                    breaks: [],
-                    body: '',
-                    type: 'feat',
-                    component: 'readme'
-                },
-                {
-                    hash: 'bc587e5cff8342d1e70c807f982723473a05914a',
-                    subject: 'change node executable to be named ez-changelog vs ezChangelog',
-                    closes: [],
-                    breaks: [],
-                    breaking: ' v1.0.0 saved the node executable as ezChangelog whereas this update will save the\nnode executable as ez-changelog. This was done for naming consistancy\n',
-                    body: 'BREAKING CHANGE: v1.0.0 saved the node executable as ezChangelog whereas this update will save the\nnode executable as ez-changelog. This was done for naming consistancy\n',
-                    type: 'feat',
-                    component: 'node executable'
-                }
-            ];
-
-            var sections = changelog.getSectionsFomCommits(commits);
-            expect(sections.fix.changelog.length).to.be.eql(1);
-            expect(sections.fix.changelog[0].hash).to.be.eql('265d635cef8bdc16c286477beb948fd11e85bfc1');
-
-            expect(sections.feat.readme.length).to.be.eql(1);
-            expect(sections.feat.readme[0].hash).to.be.eql('298cffa6a7a36bcde5650323b5d6d0f6cec065e8');
-        });
-    });
-
-    describe('getRepoUrl', function () {
-        it('should return empty string if no package.json', function() {
-            expect(changelog.getRepoUrl()).to.be.eql('');
-        });
-
-        it('should return empty string if package.json has no repo', function() {
-            expect(changelog.getRepoUrl({})).to.be.eql('');
-        });
-
-        it('should return empty string if package.json has no repo.url', function() {
-            expect(changelog.getRepoUrl({"repository": {}})).to.be.eql('');
-        });
-
-        it('should remove \/browse from repo url', function() {
-            var pJson = {
-                "repository": {
-                    "url": "https://bitbucket.org/usr/repo/browse"
-                }
-            };
-            expect(changelog.getRepoUrl(pJson)).to.be.eql('https://bitbucket.org/usr/repo/commits');
-        });
-
-        it('should add \/commit to github url', function() {
-            var pJson = {
-                "repository": {
-                    "url": "https://github.com/angular/angular.js"
-                }
-            };
-            expect(changelog.getRepoUrl(pJson)).to.be.eql('https://github.com/angular/angular.js/commit');
-        });
-
-        it('should add \/commits to bitbucket url', function() {
-            var pJson = {
-                "repository": {
-                    "url": "https://bitbucket.org/usr/repo/browse"
-                }
-            };
-            expect(changelog.getRepoUrl(pJson)).to.be.eql('https://bitbucket.org/usr/repo/commits');
-        });
-    });
-
-    describe('getIssueUrl', function () {
-        it('should return empty string if no package.json', function() {
-            expect(changelog.getIssueUrl()).to.be.eql('');
-        });
-
-        it('should return empty string if package.json has no bugs', function() {
-            expect(changelog.getIssueUrl({})).to.be.eql('');
-        });
-
-        it('should return empty string if package.json has no bugs.url', function() {
-            expect(changelog.getIssueUrl({"bugs": {}})).to.be.eql('');
-        });
-
-        it('should return the package.json bugs.url', function() {
-            var pJson = {
-                "bugs": {
-                    "url": "https://github.com/dougiefresh49/ez-changelog/issues"
-                }
-            };
-            expect(changelog.getIssueUrl(pJson)).to.be.eql('https://github.com/dougiefresh49/ez-changelog/issues');
-        });
-
-    });
-
-    describe('linkToIssue', function () {
-        it('should create a link to an issue', function() {
-            expect(changelog.linkToIssue('333')).to.be.eql('[#333](https://github.com/dougiefresh49/ez-changelog/issues/333)');
-        });
-    });
-
-    describe('linkToCommit', function () {
-        it('should create a link to a commit', function() {
-            expect(changelog.linkToCommit('992faac888d81a8f18c8646be2a2b07eb36feed7')).to.be.eql('[992faac8](https://github.com/dougiefresh49/ez-changelog/commit/992faac888d81a8f18c8646be2a2b07eb36feed7)');
-        });
-    });
-
-    describe('currentDate', function () {
-        it('should get the current date', function() {
-            expect(changelog.currentDate(new Date(2016, 1, 5))).to.be.eql('2016-02-05');
-        });
-    });
-
-    describe('getPreviousChangelog', function () {
-        it('should get empty string when no previous changelog ', function() {
-            changelog.getPreviousChangelog('').then(function (prevChangeLog) {
-                expect(prevChangeLog).to.be.eql('');
-            });
-        });
-
-        // TODO: prob need to test if there is an existing file
-        // would create fake file, write blah to it, call getPreviousChangelog, then delete the file
     });
 });
