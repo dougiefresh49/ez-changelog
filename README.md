@@ -16,14 +16,24 @@ A simple and easy way to generate a CHANGELOG.md based on
   1. [How It Works](#how-it-works)
   1. [Setup](#setup)
   1. [Usage](#usage)
+  1. [Flags and Arguments](#flags-and-arguments)
   1. [Example](#example)
 
 ## How It Works
-`ez-changelog`, simply put, is a tool that generates (or adds to an existing) release changelog based on 
+`ez-changelog`, simply put, is a tool that generates (or adds to an existing) release changelog or buildlog based on 
 [commitizen](https://github.com/commitizen/cz-cli) style commits. 
 
-It takes every commit in the git log since the last version tag, sorts those commits by their type, 
+### Changelogs
+`ez-changelog` takes every commit in the git log **since the last version tag**, sorts those commits by their type, 
+and then builds a markdown file with the commits properly organized.  
+
+### Buildlogs
+`ez-changelog` takes every commit in the git log **since the last build date**, sorts those commits by their type, 
 and then builds a markdown file with the commits properly organized. 
+
+### Changelog vs Buildlog
+The **changelog** is used for a complete comprehensive report of features, fixes, etc that are bundled in a release
+whereas the **buildlog** is used to track incremental changes for each new build.  
 
 
 ## Setup 
@@ -36,7 +46,9 @@ Building the changelog is easy and painless
 
 * Add the following script to your `package.json`
 
-  `"changelog": "ez-changelog"`
+  ```js
+  "changelog": "ez-changelog"
+  ```
 
   ```js
   // package.json
@@ -46,6 +58,7 @@ Building the changelog is easy and painless
     ...
     "scripts": [
       "changelog": "ez-changelog"
+      "buildlog": "ez-changelog --incremental"
     ]     
     ...
   }  
@@ -53,10 +66,39 @@ Building the changelog is easy and painless
 
 * Run the script
 
-  `npm run changelog <version-and-title> <changelog-file>`
+  `npm run changelog`
+  
+  OR
+  
+  `npm run buildlog --build <build_number>`
 
 
+## Flags and Arguments
+All flags and arguments are optional and come with standard defaults, all noted below
+
+###### [--incremental] 
+  - flag used to denote that ez-changelog is generating a buildlog
+
+
+###### [-v <version_number_and_name>] {string}
+  - default: last git tag
+  - argument passed to tell ez-changelog what to name the new release
+  - **example:** `npm run changelog -v "v1.0.0 My First Release"`
+
+  
+###### [-file <path_to_log_file>] {string}
+  - default: CHANGELOG.md or BUILDLOG.md with `--incremental` flag
+  - argument passed to tell ez-changelog where to create or append the newly generated log
+  - **example:** `npm run changelog --file MY_CHANGELOG.md`
+  - **example2:** `npm run buildlog --file MY_BUILDLOG.md`
+
+
+###### [-build <build_number>] {string}
+  - default: SNAPSHOT
+  - argument used to help 
+  - **example:** `npm run buildlog --build 33` 
  
+
 ## Example
 Below is a simple walk through of how the tool can be used from scratch, including [tagging](#tagging), 
 [committing](#commiting-changes), and [building the changelog](#build-the-changelog).
@@ -94,7 +136,7 @@ feat(super changelog): add support for super changelog
 ### Build the Changelog
 This is the easiest step!
 
-`npm run changelog "v1.0.0 My First Release" CHANGELOG.md`
+`npm run changelog -v "v1.0.0 My First Release" --file CHANGELOG.md`
 
 Now we would have a `CHANGELOG.md` in the root of your project with 2 features: "changelog" and 
 "super changelog", the first with 2 commits listed below and the second with 1.
