@@ -9,19 +9,27 @@ var q = require('qq'),
     packageJson = require('./package.json');
 
 var GIT_TAG_CMD = 'git describe --tags --abbrev=0';
-var GIT_LOG_CMD = 'git log --grep="%s" -E --format=%s %s..HEAD';
+var GIT_LOG_CMD = 'git log --grep="%s" -E --date=local --format=%s %s..HEAD';
 
 var EMPTY_COMPONENT = '$$';
 var HEADER_TPL = '<a name="%s"></a>\n# %s (%s)\n\n';
 
 
-// export for testing
+/** Left TODO:
+ *      - add "No changes" if built and nothing to print
+ *      - remove the empty printing of "Breaking Changes"
+ *      - test getLastBuildDate function
+ *      - test generate function
+ */
+
+/* Export for Testing */
 module.exports = {
     currentDate: currentDate,
     generate: generate,
     getFileName: getFileName,
     getRepoUrl: getRepoUrl,
     getIssueUrl: getIssueUrl,
+    getLastBuildDate: getLastBuildDate, // TODO: test
     getPreviousChangelog: getPreviousChangelog,
     getSectionsFomCommits: getSectionsFomCommits,
     getUpdatedVersionName: getUpdatedVersionName,
@@ -33,12 +41,11 @@ module.exports = {
     writeChangelog: writeChangelog
 };
 
-// Execute Main function when called
+/* Execute Main function when called */
 generate();
 
 /* Main Function */
-// TODO: test this
-function generate() {
+function generate() { // TODO: test
     // Keep from writing the changelog into the .spec file when using mocha in npm run test:tdd  (super weird)
     if(isCallFromMocha(process.argv[1]))
         return;
@@ -47,34 +54,44 @@ function generate() {
 
         console.log('Reading git log since', tag);
 
-        var isIncremental = (argv.incremental) ? true : false,
-            buildNumber = (argv.build) ? argv.build : 'SNAPSHOT',
-            file = (!argv.file) ? getFileName(isIncremental) :  argv.file,
-            version = (!argv.v) ? getUpdatedVersionName(isIncremental, tag, buildNumber, packageJson) : argv.v;
+        var lastBuildDate,
+            buildNumber = argv.build || 'SNAPSHOT',
+            file = argv.file || getFileName(argv.incremental),
+            version = argv.v || getUpdatedVersionName(argv.incremental, tag, buildNumber, packageJson);
 
-        readGitLog('^fix|^feat|^perf|BREAKING', tag).then(function(commits) {
+        getPreviousChangelog(file).then(function (previousChangelog) {
 
-            console.log('Parsed', commits.length, 'commits');
-            console.log('Generating changelog to', file, '(', version, ')');
+            console.log("thing");
+            lastBuildDate = getLastBuildDate(previousChangelog);
+            console.log(lastBuildDate);
 
-            getPreviousChangelog(file).then(function (previousChangelog) {
+            readGitLog('^fix|^feat|^perf|BREAKING', tag).then(function(commits) {
+
+                console.log('Parsed', commits.length, 'commits');
+                console.log('Generating changelog to', file, '(', version, ')');
+
+
                 var writeStream = fs.createWriteStream(file, {flags: 'w'});
-                writeChangelog(writeStream, getSectionsFomCommits(commits), version);
+                writeChangelog(writeStream, getSectionsFomCommits(commits, argv.incremental, lastBuildDate), version);
                 writeStream.write(previousChangelog);
+
             });
         });
     });
 }
 
 /* Helper Functions */
-
-function currentDate (currDate) {
+function currentDate (isIncremental, currDate) {
     var now = currDate || new Date();
     var pad = function(i) {
         return ('0' + i).substr(-2);
     };
 
-    return util.format('%d-%s-%s', now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate()));
+    var dateString = util.format('%d-%s-%s', now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate()));
+
+    return (isIncremental)
+        ? dateString + ' ' + util.format('%s:%s',  pad(now.getHours()), pad(now.getMinutes()))
+        : dateString;
 }
 
 function getFileName(isIncremental) {
@@ -92,12 +109,33 @@ function getIssueUrl(pJson) {
     return pJson.bugs.url;
 }
 
-// TODO: might need to test this more for coverage
-function getPreviousChangelog(file) {
+function getLastBuildDate(previousLog) {
+    console.log(previousLog);
+    var dateStart = previousLog.indexOf('\('),
+        dateEnd = previousLog.indexOf('\)');
+
+    console.log("start: ", dateStart);
+    console.log("end: ", dateEnd);
+
+    return (dateStart > -1 && dateEnd > -1) ? new Date(previousLog.substring(dateStart + 1, dateEnd)) : undefined;
+
+}
+
+function getPreviousChangelog(file) { // TODO: might need to test further more for coverage
     var deferred = q.defer();
 
+    console.log(file);
+
     fs.stat(file, function (err, stat) {
-        (err === null) ? deferred.resolve(fs.readFileSync(file)) : deferred.resolve('');
+        if(err === null) {
+            fs.readFile(file, 'utf8', function(err, fileData){
+                console.log(fileData);
+                (err === null) ? deferred.resolve(fileData) : deferred.resolve('');
+            });
+        }
+        else {
+            deferred.resolve('');
+        }
     });
 
     return deferred.promise;
@@ -137,7 +175,7 @@ function getRepoUrl(pJson) {
     return repoUrl;
 }
 
-function getSectionsFomCommits(commits) {
+function getSectionsFomCommits(commits, isIncremental, lastBuildDate) {
     // Init sections
     var sections = {
         fix: {},
@@ -150,21 +188,23 @@ function getSectionsFomCommits(commits) {
 
     // Loop through the commits and save the commit to its corresponding section
     commits.forEach(function(commit) {
-        var section = sections[commit.type];
-        var component = commit.component || EMPTY_COMPONENT;
+        if( (isIncremental && commit.date > lastBuildDate) || !isIncremental ) {
+            var section = sections[commit.type];
+            var component = commit.component || EMPTY_COMPONENT;
 
-        if (section) {
-            section[component] = section[component] || [];
-            section[component].push(commit);
-        }
+            if (section) {
+                section[component] = section[component] || [];
+                section[component].push(commit);
+            }
 
-        if (commit.breaking) {
-            sections.breaks[component] = sections.breaks[component] || [];
-            sections.breaks[component].push({
-                subject: util.format("due to %s,\n %s", linkToCommit(commit.hash), commit.breaking),
-                hash: commit.hash,
-                closes: []
-            });
+            if (commit.breaking) {
+                sections.breaks[component] = sections.breaks[component] || [];
+                sections.breaks[component].push({
+                    subject: util.format("due to %s,\n %s", linkToCommit(commit.hash), commit.breaking),
+                    hash: commit.hash,
+                    closes: []
+                });
+            }
         }
     });
 
@@ -198,6 +238,7 @@ function parseRawCommit(raw) {
     var lines = raw.split('\n');
     var msg = {}, match;
 
+    msg.date = new Date(lines.shift());
     msg.hash = lines.shift();
     msg.subject = lines.shift();
     msg.closes = [];
@@ -266,11 +307,11 @@ function printSection(stream, title, section, printCommitLinks) {
     stream.write('\n');
 }
 
-// TODO: increase test on this
 function readGitLog(grep, from) {
     var deferred = q.defer();
 
-    child.exec(util.format(GIT_LOG_CMD, grep, '%H%n%s%n%b%n==END==', from), function(code, stdout, stderr) {
+    // See https://git-scm.com/docs/pretty-formats for a full list of options
+    child.exec(util.format(GIT_LOG_CMD, grep, '%cd%n%H%n%s%n%b%n==END==', from), function(code, stdout, stderr) {
         var commits = [];
 
         stdout.split('\n==END==\n').forEach(function(rawCommit) {
@@ -289,7 +330,7 @@ function warn() {
 }
 
 function writeChangelog(stream, sections, version) {
-    stream.write(util.format(HEADER_TPL, version, version, currentDate()));
+    stream.write(util.format(HEADER_TPL, version, version, currentDate(argv.incremental)));
     printSection(stream, 'Bug Fixes', sections.fix);
     printSection(stream, 'Features', sections.feat);
     printSection(stream, 'Performance Improvements', sections.perf);

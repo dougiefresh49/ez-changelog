@@ -7,7 +7,11 @@ describe('changelog.js', function() {
 
     describe('currentDate', function () {
         it('should get the current date', function() {
-            expect(changelog.currentDate(new Date(2016, 1, 5))).to.be.eql('2016-02-05');
+            expect(changelog.currentDate(false, new Date(2016, 1, 5))).to.be.eql('2016-02-05');
+        });
+
+        it('should get current date with hours and minutes', function() {
+            expect(changelog.currentDate(true, new Date(2016, 1, 10, 21, 30))).to.be.eql('2016-02-10 21:30');
         });
     });
 
@@ -147,6 +151,53 @@ describe('changelog.js', function() {
             expect(sections.feat.readme.length).to.be.eql(1);
             expect(sections.feat.readme[0].hash).to.be.eql('298cffa6a7a36bcde5650323b5d6d0f6cec065e8');
         });
+
+        it('should get sections from commits with dates with incremental on', function() {
+            var commits = [
+                {
+                    hash: '265d635cef8bdc16c286477beb948fd11e85bfc1',
+                    date: new Date('Sat Feb 6 12:04:15 2016'),
+                    subject: 'add ability to append to top of existing changelog vs bottom',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'fix',
+                    component: 'changelog'
+                },
+                {
+                    hash: '298cffa6a7a36bcde5650323b5d6d0f6cec065e8',
+                    date: new Date('Sat Feb 6 12:04:15 2016'),
+                    subject: 'add initial readmen with examples and usage',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'feat',
+                    component: 'readme'
+                },
+                {
+                    hash: 'bc587e5cff8342d1e70c807f982723473a05914a',
+                    date: new Date('Sat Feb 4 12:04:15 2016'),
+                    subject: 'change node executable to be named ez-changelog vs ezChangelog',
+                    closes: [],
+                    breaks: [],
+                    breaking: ' v1.0.0 saved the node executable as ezChangelog whereas this update will save ' +
+                    'the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    body: 'BREAKING CHANGE: v1.0.0 saved the node executable as ezChangelog whereas this update will' +
+                    ' save the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    type: 'feat',
+                    component: 'node executable'
+                }
+            ];
+
+            var sections = changelog.getSectionsFomCommits(commits, true, new Date('Sat Feb 5 12:04:15 2016'));
+            expect(sections.fix.changelog.length).to.be.eql(1);
+            expect(sections.fix.changelog[0].hash).to.be.eql('265d635cef8bdc16c286477beb948fd11e85bfc1');
+
+            expect(sections.feat.readme.length).to.be.eql(1);
+            expect(sections.feat.readme[0].hash).to.be.eql('298cffa6a7a36bcde5650323b5d6d0f6cec065e8');
+
+            expect(sections.breaks['node executable']).to.be.eql(undefined);
+        });
     });
 
     describe('getUpdatedVersionName', function () {
@@ -192,11 +243,13 @@ describe('changelog.js', function() {
     describe('parseRawCommit', function() {
         it('should parse raw commit', function() {
             var msg = changelog.parseRawCommit(
+                'Sat Feb 6 12:04:15 2016\n' +
                 '9b1aff905b638aa274a5fc8f88662df446d374bd\n' +
                 'feat(scope): broadcast $destroy event on scope destruction\n' +
                 'perf testing shows that in chrome this change adds 5-15% overhead\n' +
                 'when destroying 10k nested scopes where each scope has a $destroy listener\n');
 
+            expect(msg.date).to.be.eql(new Date('Sat Feb 6 12:04:15 2016'));
             expect(msg.type).to.be.eql('feat');
             expect(msg.hash).to.be.eql('9b1aff905b638aa274a5fc8f88662df446d374bd');
             expect(msg.subject).to.be.eql('broadcast $destroy event on scope destruction');
@@ -207,6 +260,7 @@ describe('changelog.js', function() {
 
         it('should parse closed issues', function() {
             var msg = changelog.parseRawCommit(
+                'Sat Feb 6 12:04:15 2016\n' +
                 '13f31602f396bc269076ab4d389cfd8ca94b20ba\n' +
                 'feat(ng-list): Allow custom separator\n' +
                 'bla bla bla\n\n' +
@@ -217,6 +271,7 @@ describe('changelog.js', function() {
 
         it('should parse breaking changes', function() {
             var msg = changelog.parseRawCommit(
+                'Sat Feb 6 12:04:15 2016\n' +
                 '13f31602f396bc269076ab4d389cfd8ca94b20ba\n' +
                 'feat(ng-list): Allow custom separator\n' +
                 'bla bla bla\n\n' +
