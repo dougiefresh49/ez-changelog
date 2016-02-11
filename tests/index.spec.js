@@ -49,6 +49,20 @@ describe('changelog.js', function() {
 
     });
 
+    describe('getLastBuildDate', function () {
+        it('should get last build if no build log supplied', function() {
+            expect(changelog.getLastBuildDate()).to.be.eql(undefined);
+        });
+
+        it('should get last build log from existing log', function() {
+            var oldLog =
+                '<a name="ez-changelog-v1.0.0.SNAPSHOT"></a>\n' +
+                '# ez-changelog-v1.0.0.SNAPSHOT (2016-02-10 23:50)\n' +
+                '## Breaking Changes\n';
+            expect(changelog.getLastBuildDate(oldLog)).to.be.eql(new Date('2016-02-10 23:50'));
+        });
+    });
+
     describe('getPreviousChangelog', function () {
         it('should get empty string when no previous changelog ', function() {
             changelog.getPreviousChangelog('').then(function (prevChangeLog) {

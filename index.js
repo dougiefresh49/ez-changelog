@@ -61,16 +61,14 @@ function generate() { // TODO: test
 
         getPreviousChangelog(file).then(function (previousChangelog) {
 
-            console.log("thing");
             lastBuildDate = getLastBuildDate(previousChangelog);
-            console.log(lastBuildDate);
 
             readGitLog('^fix|^feat|^perf|BREAKING', tag).then(function(commits) {
 
                 console.log('Parsed', commits.length, 'commits');
                 console.log('Generating changelog to', file, '(', version, ')');
 
-
+                // Write log and append existing
                 var writeStream = fs.createWriteStream(file, {flags: 'w'});
                 writeChangelog(writeStream, getSectionsFomCommits(commits, argv.incremental, lastBuildDate), version);
                 writeStream.write(previousChangelog);
@@ -110,12 +108,8 @@ function getIssueUrl(pJson) {
 }
 
 function getLastBuildDate(previousLog) {
-    console.log(previousLog);
-    var dateStart = previousLog.indexOf('\('),
-        dateEnd = previousLog.indexOf('\)');
-
-    console.log("start: ", dateStart);
-    console.log("end: ", dateEnd);
+    var dateStart = previousLog ? previousLog.indexOf('\(') : -1,
+        dateEnd = previousLog ? previousLog.indexOf('\)') : -1;
 
     return (dateStart > -1 && dateEnd > -1) ? new Date(previousLog.substring(dateStart + 1, dateEnd)) : undefined;
 
@@ -271,7 +265,7 @@ function parseRawCommit(raw) {
 }
 
 function printSection(stream, title, section, printCommitLinks) {
-    printCommitLinks = printCommitLinks === undefined ? true : printCommitLinks;
+    printCommitLinks = (printCommitLinks === undefined) ? true : printCommitLinks;
     var components = Object.getOwnPropertyNames(section).sort();
 
     if (!components.length) return;
