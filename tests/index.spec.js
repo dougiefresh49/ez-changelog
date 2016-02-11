@@ -15,6 +15,13 @@ describe('changelog.js', function() {
         });
     });
 
+    describe('generate', function () {
+
+        it('should return false when calling from spec', function() {
+            expect(changelog.generate()).to.be.eql(false);
+        });
+    });
+
     describe('getFileName', function () {
         it('should get BUILDLOG.md as file name', function() {
             expect(changelog.getFileName(true)).to.be.eql('BUILDLOG.md');

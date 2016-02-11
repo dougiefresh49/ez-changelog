@@ -20,6 +20,9 @@ var NO_COMMITS_TO_LOG = true;
 
 /** Left TODO:
  *      - test generate function
+ *
+ * Maybe in the Future
+ *      - add ability to show non important section commits in buildlog (ie testing)
  */
 
 /* Export for Testing */
@@ -46,12 +49,12 @@ module.exports = {
 generate();
 
 /* Main Function */
-function generate() { // TODO: test
+function generate() { // TODO: add more tests
     // Keep from writing the changelog into the .spec file when using mocha in npm run test:tdd  (super weird)
     if(isCallFromMocha(process.argv[1]))
-        return;
+        return false;
 
-    getPreviousTag().then(function(tag) {
+    return getPreviousTag().then(function(tag) {
 
         console.log('Reading git log since', tag);
 
