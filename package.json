@@ -6,8 +6,8 @@
   "scripts": {
     "check-coverage": "istanbul check-coverage --statements 50 --branches 50 --functions 50 --lines 50",
     "report-coverage": "cat ./coverage/lcov.info | codecov",
-    "test": "istanbul cover -x *.spec.js _mocha -- -R spec tests",
-    "test:tdd": "mocha tests -w",
+    "test": "istanbul cover -x *.spec.js _mocha -- -R spec tests/*.spec.js",
+    "test:tdd": "mocha tests/*.spec.js -w",
     "commit": "git-cz",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
@@ -32,7 +32,8 @@
   "dependencies": {
     "fs": "0.0.2",
     "qq": "0.3.5",
-    "util": "0.10.3"
+    "util": "0.10.3",
+    "yargs": "3.32.0"
   },
   "devDependencies": {
     "chai": "3.5.0",
