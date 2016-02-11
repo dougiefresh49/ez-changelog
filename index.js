@@ -14,9 +14,11 @@ var GIT_LOG_CMD = 'git log --grep="%s" -E --date=local --format=%s %s..HEAD';
 var EMPTY_COMPONENT = '$$';
 var HEADER_TPL = '<a name="%s"></a>\n# %s (%s)\n\n';
 
+// Updated when sorting commits into sections in getSectionsFomCommits
+var NO_COMMITS_TO_LOG = true;
+
 
 /** Left TODO:
- *      - add "No changes" if built and nothing to print
  *      - remove the empty printing of "Breaking Changes"
  *      - test getLastBuildDate function
  *      - test generate function
@@ -70,7 +72,10 @@ function generate() { // TODO: test
 
                 // Write log and append existing
                 var writeStream = fs.createWriteStream(file, {flags: 'w'});
-                writeChangelog(writeStream, getSectionsFomCommits(commits, argv.incremental, lastBuildDate), version);
+                writeChangelog(writeStream,
+                               getSectionsFomCommits(commits, argv.incremental, lastBuildDate),
+                               version,
+                               NO_COMMITS_TO_LOG);
                 writeStream.write(previousChangelog);
 
             });
@@ -117,8 +122,6 @@ function getLastBuildDate(previousLog) {
 
 function getPreviousChangelog(file) { // TODO: might need to test further more for coverage
     var deferred = q.defer();
-
-    console.log(file);
 
     fs.stat(file, function (err, stat) {
         if(err === null) {
@@ -199,6 +202,8 @@ function getSectionsFomCommits(commits, isIncremental, lastBuildDate) {
                     closes: []
                 });
             }
+
+            NO_COMMITS_TO_LOG = false;
         }
     });
 
@@ -323,10 +328,16 @@ function warn() {
     console.log('WARNING:', util.format.apply(null, arguments));
 }
 
-function writeChangelog(stream, sections, version) {
+function writeChangelog(stream, sections, version, noCommitsToLog) {
     stream.write(util.format(HEADER_TPL, version, version, currentDate(argv.incremental)));
-    printSection(stream, 'Bug Fixes', sections.fix);
-    printSection(stream, 'Features', sections.feat);
-    printSection(stream, 'Performance Improvements', sections.perf);
-    printSection(stream, 'Breaking Changes', sections.breaks, false);
+
+    if(noCommitsToLog) {
+        stream.write('### No New Commits\n\n'); // TODO: add tests
+    }
+    else {
+        printSection(stream, 'Bug Fixes', sections.fix);
+        printSection(stream, 'Features', sections.feat);
+        printSection(stream, 'Performance Improvements', sections.perf);
+        printSection(stream, 'Breaking Changes', sections.breaks, false);
+    }
 }

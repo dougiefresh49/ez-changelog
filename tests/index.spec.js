@@ -439,7 +439,18 @@ describe('changelog.js', function() {
                 '- **readme:** add initial readmen with examples and usage\n' +
                 '  ([298cffa6](https://github.com/dougiefresh49/ez-changelog/commit/298cffa6a7a36bcde5650323b5d6d0f6cec065e8))\n\n';
 
-            changelog.writeChangelog(streamMock, sections, 'vTest');
+            changelog.writeChangelog(streamMock, sections, 'vTest', false);
+            expect(output).to.be.eql(expectedOutput);
+        });
+
+        it('should write "no new commits" to log', function() {
+            var currentDate = changelog.currentDate();
+            var expectedOutput =
+                '<a name="vTest"></a>\n' +
+                '# vTest (' + currentDate + ')\n\n' +
+                '### No New Commits\n\n';
+
+            changelog.writeChangelog(streamMock, sections, 'vTest', true);
             expect(output).to.be.eql(expectedOutput);
         });
     });
