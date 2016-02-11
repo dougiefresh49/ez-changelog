@@ -332,7 +332,7 @@ function writeChangelog(stream, sections, version, noCommitsToLog) {
     stream.write(util.format(HEADER_TPL, version, version, currentDate(argv.incremental)));
 
     if(noCommitsToLog) {
-        stream.write('### No New Commits\n\n'); // TODO: add tests
+        stream.write('### Nothing important to note\n\n'); // TODO: add tests
     }
     else {
         printSection(stream, 'Bug Fixes', sections.fix);

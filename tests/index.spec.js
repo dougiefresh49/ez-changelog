@@ -448,7 +448,7 @@ describe('changelog.js', function() {
             var expectedOutput =
                 '<a name="vTest"></a>\n' +
                 '# vTest (' + currentDate + ')\n\n' +
-                '### No New Commits\n\n';
+                '### Nothing important to note\n\n';
 
             changelog.writeChangelog(streamMock, sections, 'vTest', true);
             expect(output).to.be.eql(expectedOutput);
