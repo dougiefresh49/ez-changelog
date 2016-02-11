@@ -167,6 +167,16 @@ describe('changelog.js', function() {
         });
     });
 
+    describe('isCallFromMocha', function () {
+        it('should say call is from mocha', function() {
+            expect(changelog.isCallFromMocha('some/file/path/mocha/')).to.be.eql(true);
+        });
+
+        it('should say call is not from mocha', function() {
+            expect(changelog.isCallFromMocha('--incremental')).to.be.eql(false);
+        });
+    });
+
     describe('linkToCommit', function () {
         it('should create a link to a commit', function() {
             expect(changelog.linkToCommit('992faac888d81a8f18c8646be2a2b07eb36feed7')).to.be.eql('[992faac8](https://github.com/dougiefresh49/ez-changelog/commit/992faac888d81a8f18c8646be2a2b07eb36feed7)');

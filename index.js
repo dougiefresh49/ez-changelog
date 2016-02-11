@@ -25,6 +25,7 @@ module.exports = {
     getPreviousChangelog: getPreviousChangelog,
     getSectionsFomCommits: getSectionsFomCommits,
     getUpdatedVersionName: getUpdatedVersionName,
+    isCallFromMocha: isCallFromMocha,
     linkToIssue: linkToIssue,
     linkToCommit: linkToCommit,
     parseRawCommit: parseRawCommit,
@@ -32,23 +33,24 @@ module.exports = {
     writeChangelog: writeChangelog
 };
 
+// Execute Main function when called
+generate();
+
 /* Main Function */
 // TODO: test this
-function generate(file, version) {
-    var isIncremental = (argv.incremental) ? true : false;
-    var buildNumber = (argv.build) ? argv.build : '';
-
-    if(!file) {
-        file = getFileName(isIncremental);
-    }
+function generate() {
+    // Keep from writing the changelog into the .spec file when using mocha in npm run test:tdd  (super weird)
+    if(isCallFromMocha(process.argv[1]))
+        return;
 
     getPreviousTag().then(function(tag) {
 
         console.log('Reading git log since', tag);
 
-        if(!version) {
-            version = getUpdatedVersionName(isIncremental, tag, buildNumber, packageJson)
-        }
+        var isIncremental = (argv.incremental) ? true : false,
+            buildNumber = (argv.build) ? argv.build : 'SNAPSHOT',
+            file = (!argv.file) ? getFileName(isIncremental) :  argv.file,
+            version = (!argv.v) ? getUpdatedVersionName(isIncremental, tag, buildNumber, packageJson) : argv.v;
 
         readGitLog('^fix|^feat|^perf|BREAKING', tag).then(function(commits) {
 
@@ -176,6 +178,10 @@ function getUpdatedVersionName(isIncremental, tagVersion, buildNumber, pJson) {
     return tagVersion;
 }
 
+function isCallFromMocha(callingArg) {
+    return callingArg && callingArg.indexOf('mocha') !== -1;
+}
+
 function linkToCommit(hash) {
     var commitLink = '[%s](' + getRepoUrl(packageJson) + '\/%s)';
     return (hash) ? util.format(commitLink, hash.substr(0, 8), hash) : '';
@@ -289,8 +295,3 @@ function writeChangelog(stream, sections, version) {
     printSection(stream, 'Performance Improvements', sections.perf);
     printSection(stream, 'Breaking Changes', sections.breaks, false);
 }
-
-
-// Main Function
-// Pass in FileName and versionAndName
-//generate(process.argv[2], process.argv[3]);
