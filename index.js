@@ -19,8 +19,6 @@ var NO_COMMITS_TO_LOG = true;
 
 
 /** Left TODO:
- *      - remove the empty printing of "Breaking Changes"
- *      - test getLastBuildDate function
  *      - test generate function
  */
 
@@ -31,11 +29,12 @@ module.exports = {
     getFileName: getFileName,
     getRepoUrl: getRepoUrl,
     getIssueUrl: getIssueUrl,
-    getLastBuildDate: getLastBuildDate, // TODO: test
+    getLastBuildDate: getLastBuildDate,
     getPreviousChangelog: getPreviousChangelog,
     getSectionsFomCommits: getSectionsFomCommits,
     getUpdatedVersionName: getUpdatedVersionName,
     isCallFromMocha: isCallFromMocha,
+    isEmptySection: isEmptySection,
     linkToIssue: linkToIssue,
     linkToCommit: linkToCommit,
     parseRawCommit: parseRawCommit,
@@ -120,13 +119,12 @@ function getLastBuildDate(previousLog) {
 
 }
 
-function getPreviousChangelog(file) { // TODO: might need to test further more for coverage
+function getPreviousChangelog(file) {
     var deferred = q.defer();
 
     fs.stat(file, function (err, stat) {
         if(err === null) {
             fs.readFile(file, 'utf8', function(err, fileData){
-                console.log(fileData);
                 (err === null) ? deferred.resolve(fileData) : deferred.resolve('');
             });
         }
@@ -221,6 +219,10 @@ function isCallFromMocha(callingArg) {
     return callingArg && callingArg.indexOf('mocha') !== -1;
 }
 
+function isEmptySection(sectionComponents) {
+    return ((sectionComponents.length === 1 && sectionComponents[0] === EMPTY_COMPONENT) || !sectionComponents.length)
+}
+
 function linkToCommit(hash) {
     var commitLink = '[%s](' + getRepoUrl(packageJson) + '\/%s)';
     return (hash) ? util.format(commitLink, hash.substr(0, 8), hash) : '';
@@ -273,7 +275,7 @@ function printSection(stream, title, section, printCommitLinks) {
     printCommitLinks = (printCommitLinks === undefined) ? true : printCommitLinks;
     var components = Object.getOwnPropertyNames(section).sort();
 
-    if (!components.length) return;
+    if (isEmptySection(components)) return;
 
     stream.write(util.format('\n## %s\n\n', title));
 
@@ -281,6 +283,7 @@ function printSection(stream, title, section, printCommitLinks) {
         var prefix = '-';
         var nested = section[name].length > 1;
 
+        // Don't Print breaks[EMPTY_COMPONENT]
         if (name !== EMPTY_COMPONENT) {
             if (nested) {
                 stream.write(util.format('- **%s:**\n', name));
@@ -290,6 +293,7 @@ function printSection(stream, title, section, printCommitLinks) {
             }
         }
 
+        // Print each commit
         section[name].forEach(function(commit) {
             if (printCommitLinks) {
                 stream.write(util.format('%s %s\n  (%s', prefix, commit.subject, linkToCommit(commit.hash)));
@@ -332,7 +336,7 @@ function writeChangelog(stream, sections, version, noCommitsToLog) {
     stream.write(util.format(HEADER_TPL, version, version, currentDate(argv.incremental)));
 
     if(noCommitsToLog) {
-        stream.write('### Nothing important to note\n\n'); // TODO: add tests
+        stream.write('### Nothing important to note\n\n');
     }
     else {
         printSection(stream, 'Bug Fixes', sections.fix);

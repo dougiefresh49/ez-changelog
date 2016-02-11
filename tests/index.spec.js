@@ -242,6 +242,20 @@ describe('changelog.js', function() {
         });
     });
 
+    describe('isEmptySection', function () {
+        it('should say section is empty', function() {
+            expect(changelog.isEmptySection([])).to.be.eql(true);
+        });
+
+        it('should say section is empty for empty breaking change', function() {
+            expect(changelog.isEmptySection(['$$'])).to.be.eql(true);
+        });
+
+        it('should say section is not empty if not for breaking change', function() {
+            expect(changelog.isEmptySection(['feature1', 'feature2'])).to.be.eql(false);
+        });
+    });
+
     describe('linkToCommit', function () {
         it('should create a link to a commit', function() {
             expect(changelog.linkToCommit('992faac888d81a8f18c8646be2a2b07eb36feed7')).to.be.eql('[992faac8](https://github.com/dougiefresh49/ez-changelog/commit/992faac888d81a8f18c8646be2a2b07eb36feed7)');
