@@ -4,10 +4,10 @@
   "description": "A simple and easy way to generate a CHANGELOG.md based on Angular's changelog.js",
   "main": "index.js",
   "scripts": {
-    "check-coverage": "istanbul check-coverage --statements 50 --branches 50 --functions 50 --lines 50",
+    "check-coverage": "istanbul check-coverage --statements 90 --branches 89 --functions 90 --lines 90",
     "report-coverage": "cat ./coverage/lcov.info | codecov",
-    "test": "istanbul cover -x *.spec.js _mocha -- -R spec tests/*.spec.js",
-    "test:tdd": "mocha tests/*.spec.js -w",
+    "test": "istanbul cover -x *.spec.js jasmine-node -- --verbose tests/*.spec.js",
+    "test:jasmine": "jasmine-node --verbose tests/*.spec.js",
     "commit": "git-cz",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
@@ -20,7 +20,7 @@
     "changelog",
     "generator"
   ],
-  "author": "Doug Lasater <doug.lasater.3@gmail.com>",
+  "author": "Doug Lasater <dougiefresh491@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/dougiefresh49/ez-changelog/issues"
@@ -30,6 +30,7 @@
   },
   "homepage": "https://github.com/dougiefresh49/ez-changelog#readme",
   "dependencies": {
+    "findup": "0.1.5",
     "fs": "0.0.2",
     "qq": "0.3.5",
     "util": "0.10.3",
@@ -42,7 +43,9 @@
     "cz-conventional-changelog": "1.1.5",
     "ghooks": "1.0.3",
     "istanbul": "0.4.2",
+    "jasmine-node": "1.14.5",
     "mocha": "2.4.5",
+    "proxyquire": "1.7.10",
     "semantic-release": "^4.3.5"
   },
   "config": {
