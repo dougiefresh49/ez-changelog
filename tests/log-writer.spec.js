@@ -1,8 +1,10 @@
 'use strict';
 
-var logWriter = require('../src/log-writer'),
-    helpers = require('../src/helpers'),
-    packageReader = require('../src/package-reader');
+var argv = require('yargs').argv,
+    fs = require('fs'),
+    LogWriter = require('../src/log-writer'),
+    Helpers = require('../src/helpers'),
+    PackageReader = require('../src/package-reader');
 
 var output;
 var streamMock = {
@@ -12,43 +14,154 @@ var streamMock = {
 };
 
 describe('log-writer', function () {
+    beforeEach(function () {
+        spyOn(console, 'log');
+    });
+    
     describe('isEmptySection', function () {
         it('should say section is empty', function() {
-            expect(logWriter.isEmptySection([])).toBeTruthy();
+            expect(LogWriter.isEmptySection([])).toBeTruthy();
         });
 
         it('should say section is empty for empty breaking change', function() {
-            expect(logWriter.isEmptySection(['$$'])).toBeTruthy();
+            expect(LogWriter.isEmptySection(['$$'])).toBeTruthy();
         });
 
         it('should say section is not empty if not for breaking change', function() {
-            expect(logWriter.isEmptySection(['feature1', 'feature2'])).toBeFalsy();
+            expect(LogWriter.isEmptySection(['feature1', 'feature2'])).toBeFalsy();
+        });
+    });
+    
+    describe('getSectionsFromCommits', function () {
+        beforeEach(function () {
+            spyOn(fs, 'readFileSync').andReturn("{}");
+            spyOn(PackageReader, 'getSectionsMap').andCallThrough();
+            PackageReader.getPackage(true);
+        });
+
+        it('should get default sections for no commits', function() {
+            var sections = LogWriter.getSectionsFromCommits([]);
+            expect(PackageReader.getSectionsMap).toHaveBeenCalled();
+            expect(sections.fix).toEqual({});
+            expect(sections.feat).toEqual({});
+            expect(sections.perf).toEqual({});
+            expect(sections.breaks).toEqual({'$$' : []});
+        });
+
+        it('should get sections from a commit of varying types', function() {
+            var commits = [
+                {
+                    hash: '265d635cef8bdc16c286477beb948fd11e85bfc1',
+                    subject: 'add ability to append to top of existing changelog vs bottom',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'fix',
+                    component: 'changelog'
+                },
+                {
+                    hash: '298cffa6a7a36bcde5650323b5d6d0f6cec065e8',
+                    subject: 'add initial readmen with examples and usage',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'feat',
+                    component: 'readme'
+                },
+                {
+                    hash: 'bc587e5cff8342d1e70c807f982723473a05914a',
+                    subject: 'change node executable to be named ez-changelog vs ezChangelog',
+                    closes: [],
+                    breaks: [],
+                    breaking: ' v1.0.0 saved the node executable as ezChangelog whereas this update will save ' +
+                    'the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    body: 'BREAKING CHANGE: v1.0.0 saved the node executable as ezChangelog whereas this update will' +
+                    ' save the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    type: 'feat',
+                    component: 'node executable'
+                }
+            ];
+
+            var sections = LogWriter.getSectionsFromCommits(commits);
+            expect(sections.fix.changelog.length).toEqual(1);
+            expect(sections.fix.changelog[0].hash).toEqual('265d635cef8bdc16c286477beb948fd11e85bfc1');
+
+            expect(sections.feat.readme.length).toEqual(1);
+            expect(sections.feat.readme[0].hash).toEqual('298cffa6a7a36bcde5650323b5d6d0f6cec065e8');
+        });
+
+        it('should get sections from commits with dates with incremental on', function() {
+            var commits = [
+                {
+                    hash: '265d635cef8bdc16c286477beb948fd11e85bfc1',
+                    date: new Date('Sat Feb 6 12:04:15 2016'),
+                    subject: 'add ability to append to top of existing changelog vs bottom',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'fix',
+                    component: 'changelog'
+                },
+                {
+                    hash: '298cffa6a7a36bcde5650323b5d6d0f6cec065e8',
+                    date: new Date('Sat Feb 6 12:04:15 2016'),
+                    subject: 'add initial readmen with examples and usage',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'feat',
+                    component: 'readme'
+                },
+                {
+                    hash: 'bc587e5cff8342d1e70c807f982723473a05914a',
+                    date: new Date('Sat Feb 4 12:04:15 2016'),
+                    subject: 'change node executable to be named ez-changelog vs ezChangelog',
+                    closes: [],
+                    breaks: [],
+                    breaking: ' v1.0.0 saved the node executable as ezChangelog whereas this update will save ' +
+                    'the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    body: 'BREAKING CHANGE: v1.0.0 saved the node executable as ezChangelog whereas this update will' +
+                    ' save the\nnode executable as ez-changelog. This was done for naming consistancy\n',
+                    type: 'feat',
+                    component: 'node executable'
+                }
+            ];
+
+            argv.incremental = true;
+            var sections = LogWriter.getSectionsFromCommits(commits, new Date('Sat Feb 5 12:04:15 2016'));
+            expect(sections.fix.changelog.length).toEqual(1);
+            expect(sections.fix.changelog[0].hash).toEqual('265d635cef8bdc16c286477beb948fd11e85bfc1');
+            
+            expect(sections.feat.readme.length).toEqual(1);
+            expect(sections.feat.readme[0].hash).toEqual('298cffa6a7a36bcde5650323b5d6d0f6cec065e8');
+            
+            expect(sections.breaks['node executable'].length).toEqual(1);
         });
     });
     
     describe('linkToCommit', function () {
         it('should return an empty string if no hash provided', function() {
-            expect(logWriter.linkToCommit()).toEqual('');
+            expect(LogWriter.linkToCommit()).toEqual('');
         });
         
         it('should return a proper link to a commit', function() {
-            spyOn(packageReader, 'getRepoUrl').andReturn('some/repo/url/commit');
-            expect(logWriter.linkToCommit('992faac888d81a8f18c8646be2a2b07eb36feed7')).toEqual('[992faac8](some/repo/url/commit/992faac888d81a8f18c8646be2a2b07eb36feed7)');
+            spyOn(PackageReader, 'getRepoUrl').andReturn('some/repo/url/commit');
+            expect(LogWriter.linkToCommit('992faac888d81a8f18c8646be2a2b07eb36feed7')).toEqual('[992faac8](some/repo/url/commit/992faac888d81a8f18c8646be2a2b07eb36feed7)');
         });
     });
     
     describe('linkToIssue', function () {
         it('should return a link to an issue', function() {
-            spyOn(packageReader, 'getIssueUrl').andReturn('some/repo/url/issues');
-            expect(logWriter.linkToIssue('333')).toEqual('[#333](some/repo/url/issues/333)');
+            spyOn(PackageReader, 'getIssueUrl').andReturn('some/repo/url/issues');
+            expect(LogWriter.linkToIssue('333')).toEqual('[#333](some/repo/url/issues/333)');
         });
     });
 
     describe('printCommits', function () {
         beforeEach(function() {
             output = '';
-            spyOn(packageReader, 'getRepoUrl').andReturn('some/repo/url/commit');
-            spyOn(packageReader, 'getIssueUrl').andReturn('some/repo/url/issues');
+            spyOn(PackageReader, 'getRepoUrl').andReturn('some/repo/url/commit');
+            spyOn(PackageReader, 'getIssueUrl').andReturn('some/repo/url/issues');
         });
 
         it('should print the commits with no commit links', function() {
@@ -60,7 +173,7 @@ describe('log-writer', function () {
                 '- some subject 1.1\n' +
                 '- some subject 1.2\n';
             
-            logWriter.printCommits(streamMock, commits, '-', false);
+            LogWriter.printCommits(streamMock, commits, '-', false);
             expect(output).toEqual(expectedOutput);
         });
 
@@ -73,7 +186,7 @@ describe('log-writer', function () {
                 }
             ];
             var expectedOutput = '- some fancy subject\n  ([265d635c](some/repo/url/commit/265d635cef8bdc16c286477beb948fd11e85bfc1))\n';
-            logWriter.printCommits(streamMock, commits, '-', true);
+            LogWriter.printCommits(streamMock, commits, '-', true);
             expect(output).toEqual(expectedOutput);
         });
 
@@ -90,7 +203,7 @@ describe('log-writer', function () {
                 '  ([265d635c](some/repo/url/commit/265d635cef8bdc16c286477beb948fd11e85bfc1),\n' +
                 '   [#333](some/repo/url/issues/333))\n';
             
-            logWriter.printCommits(streamMock, commits, '-', true);
+            LogWriter.printCommits(streamMock, commits, '-', true);
             expect(output).toEqual(expectedOutput);
         });
     });
@@ -114,7 +227,7 @@ describe('log-writer', function () {
                 '- **module2:** breaking change 2\n' +
                 '\n';
 
-            logWriter.printSection(streamMock, title, section, printCommitLinks);
+            LogWriter.printSection(streamMock, title, section, printCommitLinks);
             expect(output).toEqual(expectedOutput);
         });
 
@@ -142,43 +255,20 @@ describe('log-writer', function () {
                 '  - breaking change 2.2\n' +
                 '\n';
 
-            logWriter.printSection(streamMock, title, section, printCommitLinks);
+            LogWriter.printSection(streamMock, title, section, printCommitLinks);
             expect(output).toEqual(expectedOutput);
         });
 
     });
 
     describe('writeChangelog', function () {
-        var sections = {
-            "fix": {},
-            "feat": {
-                "changelog": [{
-                    "hash": "265d635cef8bdc16c286477beb948fd11e85bfc1",
-                    "subject": "add some fancy ability",
-                    "closes": [],
-                    "breaks": [],
-                    "body": "",
-                    "type": "feat",
-                    "component": "changelog"
-                }],
-                "readme": [{
-                    "hash": "298cffa6a7a36bcde5650323b5d6d0f6cec065e8",
-                    "subject": "add initial ability",
-                    "closes": [],
-                    "breaks": [],
-                    "body": "",
-                    "type": "feat",
-                    "component": "readme"
-                }]
-            },
-            "perf": {},
-            "breaks": {}
-        };
-
         beforeEach(function() {
             output = '';
-            spyOn(packageReader, 'getRepoUrl').andReturn('some/repo/url/commit');
-            spyOn(helpers, 'getCurrentDate').andReturn('10-09-2016');
+            spyOn(PackageReader, 'getRepoUrl').andReturn('some/repo/url/commit');
+            spyOn(PackageReader, 'getSectionDetails').andCallThrough();
+            spyOn(fs, 'createWriteStream').andReturn(streamMock);
+            spyOn(Helpers, 'getCurrentDate').andReturn('10-09-2016');
+            PackageReader.getPackage(true);
         });
 
         it('should write to changelog', function() {
@@ -193,8 +283,30 @@ describe('log-writer', function () {
                 '- **readme:** add initial ability\n' +
                 '  ([298cffa6](some/repo/url/commit/298cffa6a7a36bcde5650323b5d6d0f6cec065e8))\n\n';
 
-            logWriter.writeChangelog(streamMock, sections, 'vTest', false);
+            var commits = [
+                {
+                    hash: '265d635cef8bdc16c286477beb948fd11e85bfc1',
+                    subject: 'add some fancy ability',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'feat',
+                    component: 'changelog'
+                },
+                {
+                    hash: '298cffa6a7a36bcde5650323b5d6d0f6cec065e8',
+                    subject: 'add initial ability',
+                    closes: [],
+                    breaks: [],
+                    body: '',
+                    type: 'feat',
+                    component: 'readme'
+                }
+            ];
+            LogWriter.writeChangelog(commits, 'CHANGELOG.md', new Date('10-09-2016'), '', 'vTest');
             expect(output).toEqual(expectedOutput);
+            expect(Helpers.getCurrentDate).toHaveBeenCalled();
+            expect(PackageReader.getSectionDetails).toHaveBeenCalled();
         });
 
         it('should write "no new commits" to log', function() {
@@ -203,8 +315,10 @@ describe('log-writer', function () {
                 '# vTest (10-09-2016)\n\n' +
                 '### Nothing important to note\n\n';
 
-            logWriter.writeChangelog(streamMock, sections, 'vTest', true);
+            LogWriter.writeChangelog([], 'BUILDLOG.md', new Date('10-09-2016'), '', 'vTest');
             expect(output).toEqual(expectedOutput);
+            expect(Helpers.getCurrentDate).toHaveBeenCalled();
+            expect(PackageReader.getSectionDetails).not.toHaveBeenCalled();
         });
     });
     

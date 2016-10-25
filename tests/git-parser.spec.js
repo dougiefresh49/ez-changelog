@@ -1,8 +1,18 @@
 'use strict';
 
-var GitParser = require('../src/git-parser');
+var util = require('util'),
+    Constants = require('../src/constants'),
+    GitParser = require('../src/git-parser'),
+    PackageReader = require('../src/package-reader');
 
 describe('git-parser', function () {
+    
+    describe('getPreviousTag', function () {
+        it('should return a tag', function() {
+            expect(typeof GitParser.getPreviousTag()).toEqual('string');
+        });
+    });
+    
     describe('parseRawCommit', function() {
         it('should parse raw commit', function() {
             var msg = GitParser.parseRawCommit(
@@ -42,6 +52,23 @@ describe('git-parser', function () {
                 'another line with more info\n');
 
             expect(msg.breaking).toEqual(' first breaking change\nsomething else\nanother line with more info\n');
+        });
+    });
+    
+    describe('readGitLog', function () {
+        beforeEach(function () {
+            spyOn(PackageReader, 'getSections').andReturn([{type: 'one'}, {type: 'two'}]);
+            spyOn(util, 'format').andCallThrough();
+        });
+        
+        it('should read the git log when a tag is specified', function() {
+            GitParser.readGitLog('v3.0.0');
+            expect(util.format).toHaveBeenCalledWith(Constants.GIT_LOG_CMD, '^one|^two', '%cd%n%H%n%s%n%b%n==END==', 'v3.0.0');
+        });
+
+        it('should read the git log when a tag is NOT specified', function() {
+            GitParser.readGitLog('NONE');
+            expect(util.format).toHaveBeenCalledWith(Constants.GIT_LOG_NO_TAG_CMD, '^one|^two', '%cd%n%H%n%s%n%b%n==END==');
         });
     });
     

@@ -8,7 +8,7 @@ var fs = require('fs'),
 describe('package-reader', function () {
     
     beforeEach(function () {
-        spyOn(console, 'log');            
+        spyOn(console, 'log');
     });
 
     describe('getPackage', function () {
@@ -19,7 +19,7 @@ describe('package-reader', function () {
         
         it('should load, save and return the package.json if it exists', function() {
             spyOn(fs, 'readFileSync').andReturn("{}");
-            var pkg = packageReader.getPackage();
+            var pkg = packageReader.getPackage(true);
             expect(findup.sync).toHaveBeenCalled();
             expect(pkg).toEqual({});
         });
@@ -112,6 +112,84 @@ describe('package-reader', function () {
         
     });
 
+    describe('getSectionDetails', function () {
+        it('should return the default sections details if none provided', function() {
+            spyOn(fs, 'readFileSync').andReturn("{}");
+            packageReader.getPackage(true);
+            var sectionDetails = packageReader.getSectionDetails();
+            expect(Object.keys(sectionDetails).length).toBe(4);
+        });
+
+        it('should return the custom sections details provided in package.json config', function() {
+            var fakePackage = {
+                'config': {'ez-changelog': {
+                    'overrideDefaults': true,
+                    'sections': [ {'type': 'thing1', 'title': 'THING 1'}, {'type': 'thing2', 'title': 'THING 2'} ]
+                }}
+            };
+            spyOn(fs, 'readFileSync').andReturn(JSON.stringify(fakePackage));
+            packageReader.getPackage(true);
+            var sectionDetails = packageReader.getSectionDetails();
+            expect(Object.keys(sectionDetails).length).toBe(2);
+            expect(sectionDetails.thing1).toEqual({title: 'THING 1', 'printCommitLinks': undefined});
+            expect(sectionDetails.thing2).toEqual({title: 'THING 2', 'printCommitLinks': undefined});
+        });
+
+        it('should return the custom sections details from config combined with defaults', function() {
+            var fakePackage = {
+                'config': {'ez-changelog': {
+                    'overrideDefaults': false,
+                    'sections': [ {'type': 'thing1', 'title': 'THING 1'}, {'type': 'thing2', 'title': 'THING 2'} ]
+                }}
+            };
+            spyOn(fs, 'readFileSync').andReturn(JSON.stringify(fakePackage));
+            packageReader.getPackage(true);
+            var sectionDetails = packageReader.getSectionDetails();
+            expect(Object.keys(sectionDetails).length).toBe(6);
+            expect(sectionDetails.thing1).toEqual({title: 'THING 1', 'printCommitLinks': undefined});
+            expect(sectionDetails.thing2).toEqual({title: 'THING 2', 'printCommitLinks': undefined});
+        });
+    });
+    
+    describe('getSectionsMap', function () {
+        it('should return the default sections map if none provided', function() {
+            spyOn(fs, 'readFileSync').andReturn("{}");
+            packageReader.getPackage(true);
+            var sectionMap = packageReader.getSectionsMap();
+            expect(Object.keys(sectionMap).length).toBe(4);
+        });
+
+        it('should return the custom sections map provided in package.json config', function() {
+            var fakePackage = {
+                'config': {'ez-changelog': {
+                    'overrideDefaults': true,
+                    'sections': [ {'type': 'thing1'}, {'type': 'thing2'} ]
+                }}
+            };
+            spyOn(fs, 'readFileSync').andReturn(JSON.stringify(fakePackage));
+            packageReader.getPackage(true);
+            var sectionMap = packageReader.getSectionsMap();
+            expect(Object.keys(sectionMap).length).toBe(2);
+            expect(sectionMap.thing1).toEqual({});
+            expect(sectionMap.thing2).toEqual({});
+        });
+
+        it('should return the custom sections map from config combined with defaults', function() {
+            var fakePackage = {
+                'config': {'ez-changelog': {
+                    'overrideDefaults': false,
+                    'sections': [ {'type': 'thing1'}, {'type': 'thing2'} ]
+                }}
+            };
+            spyOn(fs, 'readFileSync').andReturn(JSON.stringify(fakePackage));
+            packageReader.getPackage(true);
+            var sectionMap = packageReader.getSectionsMap();
+            expect(Object.keys(sectionMap).length).toBe(6);
+            expect(sectionMap.thing1).toEqual({});
+            expect(sectionMap.thing2).toEqual({});
+        });
+    });
+    
     describe('getUpdatedVersionName', function () {
         it('should get default changelog tag', function() {
             expect(packageReader.getUpdatedVersionName(false, 'v1.2.0', '')).toEqual('v1.2.0');
