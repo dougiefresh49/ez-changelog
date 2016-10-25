@@ -1,9 +1,8 @@
 /* Git Parser */
-var q = require('qq'),
-    util = require('util'),
-    child = require('child_process');
-
-var Constants = require('./constants')
+var util = require('util'),
+    exec = require('sync-exec'),
+    Constants = require('./constants'),
+    PackageReader = require('./package-reader');
 
 module.exports = {
     getPreviousTag: getPreviousTag,
@@ -11,17 +10,11 @@ module.exports = {
     readGitLog: readGitLog
 };
 
-var GIT_LOG_CMD = 'git log --grep="%s" -E --date=local --format=%s %s..HEAD';
-
 //////////
 
 function getPreviousTag() {
-    var deferred = q.defer();
-    child.exec(Constants.GIT_TAG_CMD, function(code, stdout, stderr) {
-        if (code) deferred.reject('Cannot get the previous tag.');
-        else deferred.resolve(stdout.replace('\n', ''));
-    });
-    return deferred.promise;
+    var output = exec(Constants.GIT_TAG_CMD);
+    return (output.code) ? 'NONE' : output.stdout.replace('\n', '');
 }
 
 function parseRawCommit(raw) {
@@ -62,20 +55,25 @@ function parseRawCommit(raw) {
     return msg;
 }
 
-function readGitLog(grep, from) {
-    var deferred = q.defer();
+function readGitLog(fromTag) {
+    var sectionsGrep = PackageReader
+        .getSections()
+        .map(function (section) {
+            return '^' + section.type;
+        })
+        .join('|');
+    
+    var command = (fromTag === 'NONE')
+        ? util.format(Constants.GIT_LOG_NO_TAG_CMD, sectionsGrep, '%cd%n%H%n%s%n%b%n==END==')
+        : util.format(Constants.GIT_LOG_CMD, sectionsGrep, '%cd%n%H%n%s%n%b%n==END==', fromTag);
+    
+    var stdout = exec(command).stdout;
+    var commits = [];
 
-    // See https://git-scm.com/docs/pretty-formats for a full list of options
-    child.exec(util.format(GIT_LOG_CMD, grep, '%cd%n%H%n%s%n%b%n==END==', from), function(code, stdout, stderr) {
-        var commits = [];
-
-        stdout.split('\n==END==\n').forEach(function(rawCommit) {
-            var commit = parseRawCommit(rawCommit);
-            if (commit) commits.push(commit);
-        });
-
-        deferred.resolve(commits);
+    stdout.split('\n==END==\n').forEach(function(rawCommit) {
+        var commit = parseRawCommit(rawCommit);
+        if (commit) commits.push(commit);
     });
-
-    return deferred.promise;
+    
+    return commits;
 }

@@ -4,11 +4,31 @@ var fs = require('fs'),
     resolve = require('path').resolve,
     package;
 
+// TODO: determine if we need this entire object, if so then in get config, it can set package.config = defaultConfig
+var configDefaults = {
+    sections: [
+        {"type": "breaks", "title": "Breaking Changes"},
+        {"type": "feat", "title": "Features"},
+        {"type": "fix", "title": "Bug Fixes"},
+        {"type": "perf", "title": "Performance Improvements"}
+    ],
+    overrideDefaults: false
+}
+var defaultSections = [
+    {"type": "breaks", "title": "Breaking Changes", "printCommitLinks": false},
+    {"type": "feat", "title": "Features"},
+    {"type": "fix", "title": "Bug Fixes"},
+    {"type": "perf", "title": "Performance Improvements"}
+];
+
 module.exports = {
     getConfig: getConfig,
     getIssueUrl: getIssueUrl,
     getPackage: getPackage,
     getRepoUrl: getRepoUrl,
+    getSections: getSections,
+    getSectionDetails: getSectionDetails,
+    getSectionsMap: getSectionsMap,
     getUpdatedVersionName: getUpdatedVersionName
 };
 
@@ -27,7 +47,7 @@ function getPackage(forceGet) {
 function getConfig() {
     if(!package || !package.config || !package.config['ez-changelog']) {
         console.log('[ez-changelog] WARNING: no config specified in package.json, using defaults');
-        return {};
+        package.config = { 'ez-changelog': {} };
     }
 
     return package.config['ez-changelog'];
@@ -63,6 +83,36 @@ function getRepoUrl() {
         : '/commits';
 
     return repoUrl;
+}
+
+function getSections() {
+    var config = getConfig();
+
+    config.sections = config.sections || [];
+    config.sections = (config.overrideDefaults && config.sections.length > 0)
+        ? config.sections
+        : defaultSections.concat(config.sections);
+
+    return config.sections;
+}
+
+function getSectionDetails() {
+    var sectionDetails = {}, sections = getSections();
+    sections.forEach(function (section) {
+        sectionDetails[section.type] = {
+            "title": section.title, 
+            "printCommitLinks": section.printCommitLinks
+        };
+    });
+    return sectionDetails;
+}
+
+function getSectionsMap() {
+    var sectionMap = {}, sections = getSections();
+    sections.forEach(function (section) {
+        sectionMap[section.type] = {};
+    });
+    return sectionMap;
 }
 
 function getUpdatedVersionName(isIncremental, tagVersion, buildNumber) {
