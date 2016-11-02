@@ -29,7 +29,6 @@ function generate(isForTesting) {
         console.log('[ez-changelog] WARNING: no previous tag found.');
     }
 
-    console.info('>>>>>>>> argv.incremental', argv.incremental);
     var buildNumber = argv.build || 'SNAPSHOT',
         file = argv.file || (argv.incremental) ? 'BUILDLOG.md' : 'CHANGELOG.md',
         version = argv.v || PackageReader.getUpdatedVersionName(argv.incremental, tag, buildNumber);
