@@ -94,6 +94,7 @@ Building the changelog is easy and painless
         ],
         "overrideDefaults": false,
         "noNewCommitsMessage": "Nothing important to note"
+        "incrementalOnlySections" : []
       }
     }     
     ...
@@ -102,6 +103,16 @@ Building the changelog is easy and painless
   * **Sections**: the list of sections to print to the changelog with the specified type and the title
   * **overrideDefaults**: flag telling ez-changelog to overwrite the defaults with only what is specified in the config
   * **noNewCommitsMessage**: the message to print when there are no new commits to log
+  * **incrementalOnlySections**: list of extra sections to only print when recording the incremental build log
+    
+    Example: 
+    
+    ```
+    {"type": "style", "title": "Styling / Formatting"},
+    {"type": "test", "title": "Tests"},
+    {"type": "chore", "title": "Chores"},
+    {"type": "docs", "title": "Documentation Updates"}
+    ```
 
 ## Flags and Arguments
 All flags and arguments are optional and come with standard defaults, all noted below
