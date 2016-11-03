@@ -23,7 +23,7 @@ function generate(isForTesting) {
     }
     
     PackageReader.getPackage();
-    var tag = GitParser.getPreviousTag();
+    var tag = argv.sinceTag || GitParser.getPreviousTag();
 
     if(tag === 'NONE') {
         console.log('[ez-changelog] WARNING: no previous tag found.');

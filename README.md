@@ -107,7 +107,7 @@ Building the changelog is easy and painless
     
     Example: 
     
-    ```
+    ```js
     {"type": "style", "title": "Styling / Formatting"},
     {"type": "test", "title": "Tests"},
     {"type": "chore", "title": "Chores"},
