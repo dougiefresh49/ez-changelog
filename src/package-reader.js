@@ -1,5 +1,6 @@
 /* Package Reader */
-var fs = require('fs'),
+var argv = require('yargs').argv, 
+    fs = require('fs'),
     findup = require('findup'),
     resolve = require('path').resolve,
     package;
@@ -83,6 +84,10 @@ function getSections() {
         ? config.sections
         : defaultSections.concat(config.sections);
 
+    config.sections = (argv.incremental && config.incrementalOnlySections) 
+        ? config.sections.concat(config.incrementalOnlySections)
+        : config.sections;
+    
     return config.sections;
 }
 

@@ -44,34 +44,75 @@ whereas the **buildlog** is used to track incremental changes for each new build
 ## Usage
 Building the changelog is easy and painless
 
-* Add the following script to your `package.json`
+### Scripts 
+  * Add the following script to your `package.json`
 
-  ```js
-  "changelog": "ez-changelog"
-  ```
+    ```js
+    "changelog": "ez-changelog"
+    ```
+  
+    ```js
+    // package.json
+    {
+      "name": "ez-changelog",
+      "version": "1.0.0",
+      ...
+      "scripts": [
+        "changelog": "ez-changelog"
+        "buildlog": "ez-changelog --incremental"
+      ]     
+      ...
+    }  
+    ```
 
+  * Run the script
+  
+    `npm run changelog`
+  
+    OR
+  
+    `npm run buildlog --build <build_number>`
+
+### Config (optional)
+  You can specify the options you want in the ```package.json``` too. The defaults are specified below.
+  
+  **NOTE**: if you are using the defaults, you do **NOT** need to add anything  
+   
   ```js
   // package.json
   {
     "name": "ez-changelog",
     "version": "1.0.0",
     ...
-    "scripts": [
-      "changelog": "ez-changelog"
-      "buildlog": "ez-changelog --incremental"
-    ]     
+    "config": {
+      "ez-changelog": {
+        "sections": [
+          {"type": "breaks", "title": "Breaking Changes"},
+          {"type": "feat", "title": "Features"},
+          {"type": "fix", "title": "Bug Fixes"},
+          {"type": "perf", "title": "Performance Improvements"}
+        ],
+        "overrideDefaults": false,
+        "noNewCommitsMessage": "Nothing important to note"
+        "incrementalOnlySections" : []
+      }
+    }     
     ...
   }  
   ```
-
-* Run the script
-
-  `npm run changelog`
-  
-  OR
-  
-  `npm run buildlog --build <build_number>`
-
+  * **Sections**: the list of sections to print to the changelog with the specified type and the title
+  * **overrideDefaults**: flag telling ez-changelog to overwrite the defaults with only what is specified in the config
+  * **noNewCommitsMessage**: the message to print when there are no new commits to log
+  * **incrementalOnlySections**: list of extra sections to only print when recording the incremental build log
+    
+    Example: 
+    
+    ```
+    {"type": "style", "title": "Styling / Formatting"},
+    {"type": "test", "title": "Tests"},
+    {"type": "chore", "title": "Chores"},
+    {"type": "docs", "title": "Documentation Updates"}
+    ```
 
 ## Flags and Arguments
 All flags and arguments are optional and come with standard defaults, all noted below
@@ -95,7 +136,7 @@ All flags and arguments are optional and come with standard defaults, all noted 
 
 ###### [-build <build_number>] {string}
   - default: SNAPSHOT
-  - argument used to help 
+  - argument used to tell ez-changelog what build number to to log in the incremental version
   - **example:** `npm run buildlog --build 33` 
  
 
