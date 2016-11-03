@@ -31,7 +31,10 @@ function getSectionsFromCommits(commits, lastBuildDate) {
         NO_COMMITS_TO_LOG = true;
     }
     var sections = PackageReader.getSectionsMap();
-    sections.breaks[EMPTY_COMPONENT] = [];
+    
+    if(sections.breaks) {
+        sections.breaks[EMPTY_COMPONENT] = [];
+    }
 
     // Loop through the commits and save the commit to its corresponding section
     commits.forEach(function(commit) {
@@ -44,7 +47,7 @@ function getSectionsFromCommits(commits, lastBuildDate) {
                 section[component].push(commit);
             }
 
-            if (commit.breaking) {
+            if (commit.breaking && sections.breaks) {
                 sections.breaks[component] = sections.breaks[component] || [];
                 sections.breaks[component].push({
                     subject: util.format("due to %s,\n %s", linkToCommit(commit.hash), commit.breaking),
@@ -119,7 +122,8 @@ function writeChangelog(commits, file, lastBuildDate, previousLog, version) {
     stream.write(util.format(HEADER_TPL, version, version, Helpers.getCurrentDate(argv.incremental)));
 
     if(NO_COMMITS_TO_LOG) {
-        stream.write('### Nothing important to note\n\n');
+        var message = PackageReader.getConfig().noNewCommitsMessage || 'Nothing important to note'; 
+        stream.write('### ' + message + '\n\n');
     }
     else {
         var sectionsDetails = PackageReader.getSectionDetails();

@@ -309,11 +309,25 @@ describe('log-writer', function () {
             expect(PackageReader.getSectionDetails).toHaveBeenCalled();
         });
 
-        it('should write "no new commits" to log', function() {
+        it('should write "no new commits" to log when nothing specified in config', function() {
+            spyOn(PackageReader, 'getConfig').andReturn({});
             var expectedOutput =
                 '<a name="vTest"></a>\n' +
                 '# vTest (10-09-2016)\n\n' +
                 '### Nothing important to note\n\n';
+
+            LogWriter.writeChangelog([], 'BUILDLOG.md', new Date('10-09-2016'), '', 'vTest');
+            expect(output).toEqual(expectedOutput);
+            expect(Helpers.getCurrentDate).toHaveBeenCalled();
+            expect(PackageReader.getSectionDetails).not.toHaveBeenCalled();
+        });
+
+        it('should write a customized "no new commits" message to log when specified in config', function() {
+            spyOn(PackageReader, 'getConfig').andReturn({noNewCommitsMessage: 'no commits dude'});
+            var expectedOutput =
+                '<a name="vTest"></a>\n' +
+                '# vTest (10-09-2016)\n\n' +
+                '### no commits dude\n\n';
 
             LogWriter.writeChangelog([], 'BUILDLOG.md', new Date('10-09-2016'), '', 'vTest');
             expect(output).toEqual(expectedOutput);
