@@ -4,16 +4,6 @@ var fs = require('fs'),
     resolve = require('path').resolve,
     package;
 
-// TODO: determine if we need this entire object, if so then in get config, it can set package.config = defaultConfig
-var configDefaults = {
-    sections: [
-        {"type": "breaks", "title": "Breaking Changes"},
-        {"type": "feat", "title": "Features"},
-        {"type": "fix", "title": "Bug Fixes"},
-        {"type": "perf", "title": "Performance Improvements"}
-    ],
-    overrideDefaults: false
-}
 var defaultSections = [
     {"type": "breaks", "title": "Breaking Changes", "printCommitLinks": false},
     {"type": "feat", "title": "Features"},
